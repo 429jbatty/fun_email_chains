@@ -11,7 +11,7 @@ class SpotifyClient:
                 redirect_uri=redirect_uri,
                 scope="playlist-modify-public, playlist-modify-private, user-library-read",
             )
-        )
+        ) 
 
     def search_album(self, query):
         results = self.sp.search(q=query, type="album")

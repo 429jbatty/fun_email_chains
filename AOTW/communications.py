@@ -9,7 +9,6 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-
 class GmailAPI:
     """
     A class for interacting with the Gmail API.
@@ -17,12 +16,12 @@ class GmailAPI:
     Handles authentication, message creation, and email sending.
     """
 
-    SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+    PORT = 57738
+    SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
-    def __init__(self):
+    def __init__(self, sender_email):
         self.service = None
-        dotenv.load_dotenv()  # Load environment variables from .env file
-        self.SENDER_EMAIL = os.getenv('SENDER_EMAIL')
+        self.sender_email = sender_email
 
     def _authenticate(self):
         """
@@ -43,8 +42,11 @@ class GmailAPI:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', self.SCOPES)
-                creds = flow.run_local_server(port=0)
+                    'credentials.json', 
+                    self.SCOPES,
+                    redirect_uri=f"http://localhost:{GmailAPI.PORT}/"  # Replace with your desired port                     
+                )
+                creds = flow.run_local_server(port=GmailAPI.PORT)
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
 
@@ -54,13 +56,13 @@ class GmailAPI:
         except HttpError as error:
             raise
 
-    def create_message(self, sender, to, subject, body):
+    def create_message(self, sender, recipients, subject, body):
         """
         Creates a message for an email.
 
         Args:
             sender: Email address of the sender.
-            to: Email address of the recipient.
+            recipients: List of email addresses of the recipients.
             subject: Subject of the email.
             body: Email body content.
 
@@ -68,19 +70,21 @@ class GmailAPI:
             A message object encoded in base64url.
         """
 
-        message = MIMEText(body, 'plain')
-        message['to'] = to
-        message['from'] = sender
-        message['subject'] = subject
-        return base64.urlsafe_b64encode(message.as_bytes()).decode()
+        message_bytes = (
+            f'To: {", ".join(recipients)}\r\n'
+            f'From: {sender}\r\n'
+            f'Subject: {subject}\r\n\r\n'
+            f'{body}'
+        ).encode('utf-8')
 
+        return base64.urlsafe_b64encode(message_bytes).decode()
 
-    def send_email(self, recipient, subject, body):
+    def send_email(self, recipients, subject, body):
         """
         Sends an email using the Gmail API.
 
         Args:
-            recipient: Email address of the recipient.
+            recipients: List of email addresses of the recipients.
             subject: Subject of the email.
             body: Email body content.
 
@@ -92,7 +96,7 @@ class GmailAPI:
             self.service = self._authenticate()
 
         try:
-            message = self.create_message(self.SENDER_EMAIL, recipient, subject, body)
+            message = self.create_message(self.sender_email, recipients, subject, body)
             self.service.users().messages().send(userId='me', body={'raw': message}).execute()
             print('Email sent!')
         except HttpError as error:
@@ -100,9 +104,66 @@ class GmailAPI:
             raise
 
 
+    def find_latest_aotw_submission(self, expected_sender:str, subject:str):
+        """
+        Finds the latest reply to the AOTW request email from the expected sender with the specific subject.
+
+        Args:
+            expected_sender: Email address of the user whose turn it is.
+            subject: The exact subject of the AOTW request email.
+
+        Returns:
+            The latest email object containing a valid AOTW submission, or None if no valid submission is found.
+        """
+
+        if not self.service:
+            self.service = self._authenticate()
+
+        try:
+            # Build search query
+            search_query = f'from: "{expected_sender}" subject:"{subject}"'
+
+            # Fetch message list
+            response = self.service.users().messages().list(userId='me', q=search_query, maxResults=1).execute()
+            message_ids = response['messages'] if 'messages' in response else []
+
+            if not message_ids:
+                return None
+
+            message_id = message_ids[0]['id']
+            message = self.service.users().messages().get(userId='me', id=message_id).execute()
+
+            # Check if the message is a reply to the AOTW request email
+            # (You might need to implement more specific checks based on your email structure)
+            payload = message['payload']
+            headers = payload['headers']
+            is_reply = False
+            for header in headers:
+                if header['name'] == 'In-Reply-To':
+                    is_reply = True
+                    break
+
+            if is_reply:
+                # Parse the email body to extract AOTW information
+                parts = payload['parts']
+                for part in parts:
+                    if part['mimeType'] == 'text/plain':
+                        body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                        extracted_data = body
+                        if extracted_data:  # If data is successfully extracted
+                            return message
+            else:
+                return None
+
+        except HttpError as error:
+            print(f'An error occurred while fetching AOTW submissions: {error}')
+            return None
+        
 # Example usage
-if __name__ == '__main__':
-    gmail_api = GmailAPI()
-    gmail_api.send_email(recipient='429jbatty@gmail.com',
-                          subject='Test Email',
-                          body='This is a test email.')
+# if __name__ == '__main__':
+#     gmail_api = GmailAPI()
+#     gmail_api.send_email(
+#         recipient='429jbatty@gmail.com',
+#         subject='Test Email',
+#         body='This is a test email.'
+#     )
