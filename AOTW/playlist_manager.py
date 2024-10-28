@@ -8,6 +8,7 @@ class PlaylistManager:
 
     def update_playlist(self, aotw:Album):
         print("Adding AOTW to Playlist")
-        print(f"AOTW details: {aotw}")
+        self.spotify_client.update_aotw_playlist(aotw.album, aotw.artist)
+        print(f"AOTW details\n{aotw}")
 
 

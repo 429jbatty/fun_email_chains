@@ -29,6 +29,6 @@ def update_playlist(env, test_date:datetime.datetime=None):
 
 if __name__ == "__main__":
     env = "test"
-    test_date = datetime.datetime.strptime("2024-11-07", "%Y-%m-%d")
-    daily_email(env, test_date)
-    # update_playlist(env, test_date)
+    test_date = datetime.datetime.strptime("2024-10-28", "%Y-%m-%d")
+    # daily_email(env, test_date)
+    update_playlist(env, test_date)

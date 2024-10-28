@@ -72,7 +72,7 @@ class AOTWManager:
                 print("Spotify playlist is up-to-date")
             else:
                 print("Updating spotify playlist...")
-                self.playlist_manager.update_playlist()
+                self.playlist_manager.update_playlist(self.aotw)
                 self.aotw.playlist_updated = True
                 self.aotw.log_data()
                 print("Playlist updated")
