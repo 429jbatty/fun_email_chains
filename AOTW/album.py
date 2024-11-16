@@ -1,16 +1,17 @@
 import os
 import json
 
+
 class Album:
     def __init__(
-            self, 
-            album:str, 
-            artist:str, 
-            spotify_link:str, 
-            playlist_updated:bool=None, 
-            week:int=None,
-            **kwargs
-        ):
+        self,
+        album: str,
+        artist: str,
+        spotify_link: str = None,
+        playlist_updated: bool = None,
+        week: int = None,
+        **kwargs,
+    ):
         self.album = album
         self.artist = artist
         self.spotify_link = spotify_link
@@ -24,7 +25,7 @@ class Album:
     def _update_playlist(self):
         self.playlist_updated = True
 
-    def _set_week(self, week:int):
+    def _set_week(self, week: int):
         self.week = week
 
     def log_data(self):
@@ -35,18 +36,22 @@ class Album:
             album (Album): The Album object containing AOTW information.
         """
 
-        filename = f"data/aotw_{self.week}.json"
+        filename = f"AOTW/data/aotw_{self.week}.json"
         if os.path.exists(filename):
-            raise FileExistsError(f"File already exists: {filename}")
-            
-        with open(filename, 'w') as f:
-            json.dump({
-                "week": self.week,
-                "album": self.album,
-                "artist": self.artist,
-                "spotify_link": self.spotify_link,
-                "playlist_updated": self.playlist_updated,
-            }, f, indent=4)
+            print(f"{filename} already exists\nData will be overwritten")
+
+        with open(filename, "w") as f:
+            json.dump(
+                {
+                    "week": self.week,
+                    "album": self.album,
+                    "artist": self.artist,
+                    "spotify_link": self.spotify_link,
+                    "playlist_updated": self.playlist_updated,
+                },
+                f,
+                indent=4,
+            )
 
     def __str__(self):
         return f"Album: {self.album}\nArtist: {self.artist}"

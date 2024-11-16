@@ -9,7 +9,16 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/AOTW/main.py",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/venv/bin/python"
+        },
+        {
+            "name": "Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "${workspaceFolder}/venv/bin/python"
         }
     ]
 }
