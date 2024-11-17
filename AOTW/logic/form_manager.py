@@ -1,8 +1,7 @@
-import datetime
-from communications import FormAPI
-from album import Album
 import os
 import json
+
+from AOTW.logic.communications import FormAPI
 
 
 class FormManager:

@@ -3,13 +3,13 @@ import json
 import datetime
 import pytz
 
-from date_helper import DateHelper
-from album import Album
-from group import Group
-from email_manager import EmailManager
-from playlist_manager import PlaylistManager
-from form_manager import FormManager
-from config import Config
+from AOTW.logic.date_helper import DateHelper
+from AOTW.logic.album import Album
+from AOTW.logic.group import Group
+from AOTW.logic.email_manager import EmailManager
+from AOTW.logic.playlist_manager import PlaylistManager
+from AOTW.logic.form_manager import FormManager
+from AOTW.logic.config import Config
 
 
 class AOTWManager:

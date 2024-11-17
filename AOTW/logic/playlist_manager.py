@@ -1,6 +1,6 @@
-from communications import SpotifyAPI
-from album import Album
-from config import Config
+from AOTW.logic.communications import SpotifyAPI
+from AOTW.logic.album import Album
+from AOTW.logic.config import Config
 
 
 class PlaylistManager:

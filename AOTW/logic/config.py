@@ -3,7 +3,7 @@ import datetime
 from enum import Enum
 from dotenv import load_dotenv
 
-from date_helper import DateHelper
+from AOTW.logic.date_helper import DateHelper
 
 
 class Env(Enum):
@@ -25,7 +25,7 @@ class Config:
         self.playlist_link = os.environ.get("PLAYLIST_LINK")
         self.data_folder = os.environ.get("DATA_FOLDER")
         self.reminder_days = os.environ.get("REMINDER_DAYS").split(",")
-        self.package_path = os.path.dirname(__file__)
+        self.package_path = os.path.dirname(os.path.dirname(__file__))
 
     def _get_env(self, env):
         result = Env(env)

@@ -1,6 +1,4 @@
-from date_helper import DateHelper
-from album import Album
-from config import Env
+from AOTW.logic.config import Env
 
 
 class EmailManager:
