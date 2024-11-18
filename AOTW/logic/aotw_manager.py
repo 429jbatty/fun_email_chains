@@ -1,5 +1,3 @@
-import os
-import json
 import datetime
 import pytz
 
@@ -10,6 +8,7 @@ from AOTW.logic.email_manager import EmailManager
 from AOTW.logic.playlist_manager import PlaylistManager
 from AOTW.logic.form_manager import FormManager
 from AOTW.logic.config import Config
+from AOTW.logic.communications import GoogleCloudStorage
 
 
 class AOTWManager:
@@ -47,28 +46,20 @@ class AOTWManager:
         else:
             return aotw.playlist_updated
 
-    def _read_aotw_from_log(
-        self,
-    ):
-        current_week = self.date_helper.get_current_week(
-            reference_day_of_week=self.config.get_aotw_day_as_int()
-        )
-
-        filepath = os.path.join(
-            os.path.join(self.config.package_path, self.config.data_folder),
-            f"aotw_{current_week}.json",
-        )
-        if os.path.exists(filepath):
-            with open(filepath, "r") as f:
-                json_data = json.load(f)
-                return Album(**json_data)
-        else:
-            print(f"No log file found for week {current_week}")
+    def _read_aotw_from_log(self, week):
+        blob_name = f"albums/aotw_{week}.json"
+        try:
+            gcs_client = GoogleCloudStorage()
+            json_data = gcs_client.read_json(blob_name)
+            return Album(**json_data)
+        except Exception as e:
+            print(f"Error reading AOTW data from GCS: {e}")
             return None
 
     def create_aotw_weekly_file(self):
-        with open("AOTW/data/submissions.json", "r") as f:
-            submission_data = json.load(f)
+        blob_name = f"form_submissions/submissions.json"
+        gcs_client = GoogleCloudStorage()
+        submission_data = gcs_client.read_json(blob_name)
 
         filtered_data = [
             entry
@@ -102,7 +93,8 @@ class AOTWManager:
         return self.form_manager.retrieve_and_log_submissions()
 
     def update_playlist(self):
-        aotw = self._read_aotw_from_log()
+        current_week = self.date_helper.get_current_week(self.aotw_day_as_int)
+        aotw = self._read_aotw_from_log(current_week)
         if aotw is not None:
             if aotw.playlist_updated:
                 print("Spotify playlist is up-to-date")

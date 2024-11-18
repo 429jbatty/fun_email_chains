@@ -1,5 +1,4 @@
-import os
-import json
+from AOTW.logic.communications import GoogleCloudStorage
 
 
 class Album:
@@ -30,28 +29,22 @@ class Album:
 
     def log_data(self):
         """
-        Writes the AOTW data to a JSON file.
+        Writes the AOTW data to a JSON file in Google Cloud Storage.
 
         Args:
-            album (Album): The Album object containing AOTW information.
+            gcs_client: An instance of the GoogleCloudStorage class.
         """
 
-        filename = f"AOTW/data/aotw_{self.week}.json"
-        if os.path.exists(filename):
-            print(f"{filename} already exists\nData will be overwritten")
-
-        with open(filename, "w") as f:
-            json.dump(
-                {
-                    "week": self.week,
-                    "album": self.album,
-                    "artist": self.artist,
-                    "spotify_link": self.spotify_link,
-                    "playlist_updated": self.playlist_updated,
-                },
-                f,
-                indent=4,
-            )
+        blob_name = f"albums/aotw_{self.week}.json"
+        data = {
+            "week": self.week,
+            "album": self.album,
+            "artist": self.artist,
+            "spotify_link": self.spotify_link,
+            "playlist_updated": self.playlist_updated,
+        }
+        gcs_client = GoogleCloudStorage()
+        gcs_client.write_to_json(data, blob_name)
 
     def __str__(self):
         return f"Album: {self.album}\nArtist: {self.artist}"

@@ -1,7 +1,7 @@
 import os
 import json
 
-from AOTW.logic.communications import FormAPI
+from AOTW.logic.communications import FormAPI, GoogleCloudStorage
 
 
 class FormManager:
@@ -10,16 +10,8 @@ class FormManager:
         self.form_handler = form_handler
 
     def _log_submissions(self, submissions):
-        filename = f"AOTW/data/submissions.json"
-        if os.path.exists(filename):
-            print(f"{filename} already exists\nData will be overwritten")
-
-        with open(filename, "w") as f:
-            json.dump(
-                submissions,
-                f,
-                indent=4,
-            )
+        gcs_client = GoogleCloudStorage()
+        gcs_client.write_to_json(submissions, "form_submissions/submissions.json")
 
     def retrieve_and_log_submissions(self):
         submissions = self.form_handler.get_form_submissions(

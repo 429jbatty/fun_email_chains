@@ -12,6 +12,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
+from google.cloud import storage
 
 
 class Authentication:
@@ -51,10 +52,12 @@ class Authentication:
                 creds = Credentials.from_authorized_user_file(
                     self.token_filename, self.scopes
                 )
+                print("Authenticating with prior token")
             except:
                 creds = None
 
         if not creds or not creds.valid:
+            print("Obtaining new token for authentication")
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
@@ -373,7 +376,103 @@ class FormAPI:
         return filtered_responses
 
 
-# Example usage
-# if __name__ == "__main__":
-#     forms_api = FormAPI()
-#     x = forms_api.read_responses(form_id="1xuOX73x4e9QzD_gSoPYUKln3eWdXoVsP2xFQbHJBsts")
+class GoogleCloudStorage:
+    BUCKET_NAME = "batty-bot-aotw"
+
+    """
+    A class for interacting with Google Cloud Storage.
+
+    Uses service account credentials for authentication.
+    """
+
+    def __init__(self):
+        """
+        Initializes the Google Cloud Storage client.
+
+        Args:
+            project_id: Your Google Cloud project ID.
+            service_account_file: Path to the service account key file in JSON format.
+        """
+
+        self.client = storage.Client.from_service_account_json(
+            "storage_credentials.json", project="cool-framing-439219-k5"
+        )
+
+    def upload_file(self, source_file_path, destination_blob_name):
+        """
+        Uploads a file to a Google Cloud Storage bucket.
+
+        Args:
+            source_file_path: The path to the local file to upload.
+            destination_blob_name: The desired name for the uploaded file in the bucket.
+
+        Raises:
+            Exception: If uploading the file fails.
+        """
+
+        bucket = self.client.bucket(GoogleCloudStorage.BUCKET_NAME)
+        blob = bucket.blob(destination_blob_name)
+
+        try:
+            blob.upload_from_filename(source_file_path)
+            print(f"File '{source_file_path}' uploaded to '{destination_blob_name}'")
+        except Exception as e:
+            print(f"Failed to upload file: {e}")
+            raise
+
+    def download_file(self, source_blob_name, destination_file_path):
+        """
+        Downloads a file from a Google Cloud Storage bucket.
+
+        Args:
+            source_blob_name: The name of the file to download from the bucket.
+            destination_file_path: The local path where the downloaded file should be saved.
+
+        Raises:
+            Exception: If downloading the file fails.
+        """
+
+        bucket = self.client.bucket(GoogleCloudStorage.BUCKET_NAME)
+        blob = bucket.blob(source_blob_name)
+
+        try:
+            blob.download_to_filename(destination_file_path)
+            print(f"File '{source_blob_name}' downloaded to '{destination_file_path}'")
+        except Exception as e:
+            print(f"Failed to download file: {e}")
+            raise
+
+    def get_bucket(self):
+        """
+        Retrieves a specific bucket object.
+
+        Args:
+            GoogleCloudStorage.BUCKET_NAME: The name of the bucket to retrieve.
+
+        Returns:
+            A bucket object or None if the bucket doesn't exist.
+        """
+
+        return self.client.bucket(GoogleCloudStorage.BUCKET_NAME)
+
+    def read_json(self, blob_name):
+        """Reads JSON data from a GCS blob and returns it as a Python object.
+
+        Args:
+            GoogleCloudStorage.BUCKET_NAME: The name of the bucket.
+            blob_name: The name of the blob.
+
+        Returns:
+            The parsed JSON data as a Python object.
+        """
+
+        bucket = self.client.bucket(GoogleCloudStorage.BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+        blob_bytes = blob.download_as_bytes()
+        return json.loads(blob_bytes)
+
+    def write_to_json(self, data, blob_name):
+        bucket = self.client.bucket(GoogleCloudStorage.BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+        json_data = json.dumps(data, indent=4)
+        blob.upload_from_string(json_data, content_type="application/json")
