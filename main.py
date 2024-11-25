@@ -49,3 +49,19 @@ def update_playlist(env, test_date: datetime.datetime = None):
     )
 
     manager.update_playlist()
+
+
+def task_daily_email(event=None):
+    daily_email("prod")
+
+
+def task_search_for_new_aotw(event=None):
+    daily_email("prod")
+
+
+def task_update_playlist(event=None):
+    daily_email("prod")
+
+
+if __name__ == "__main__":
+    task_daily_email()
