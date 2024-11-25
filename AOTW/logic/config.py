@@ -2,6 +2,7 @@ import os
 import datetime
 from enum import Enum
 from dotenv import load_dotenv
+import pytz
 
 from AOTW.logic.date_helper import DateHelper
 
@@ -50,7 +51,7 @@ class Config:
             else:
                 run_date = datetime.datetime.strptime(test_date, "%Y-%m-%d").date()
         else:
-            run_date = datetime.date.today()
+            run_date = datetime.datetime.now(tz=pytz.timezone("US/Pacific")).date()
 
         print(f"Run Date: {run_date.strftime("%m/%d/%Y")}\n")
         return run_date
