@@ -52,8 +52,8 @@ class Config:
                 run_date = datetime.datetime.strptime(test_date, "%Y-%m-%d").date()
         else:
             run_date = datetime.datetime.now(tz=pytz.timezone("US/Pacific")).date()
-
-        print(f"Run Date: {run_date.strftime("%m/%d/%Y")}\n")
+        run_date_str = run_date.strftime("%m/%d/%Y")
+        print(f"Run Date: {run_date_str}\n")
         return run_date
 
     def get_aotw_day_as_int(self):

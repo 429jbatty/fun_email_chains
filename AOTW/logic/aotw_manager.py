@@ -69,11 +69,15 @@ class AOTWManager:
         filtered_data = [
             entry
             for entry in filtered_data
-            if datetime.datetime.fromisoformat(entry["timestamp"])
+            if datetime.datetime.fromisoformat(
+                entry["timestamp"].replace("Z", "+00:00")
+            )
             >= self.date_helper.get_start_of_aotw(self.aotw_day_as_int).replace(
                 tzinfo=pytz.UTC
             )
-            and datetime.datetime.fromisoformat(entry["timestamp"])
+            and datetime.datetime.fromisoformat(
+                entry["timestamp"].replace("Z", "+00:00")
+            )
             <= self.date_helper.get_end_of_aotw(self.aotw_day_as_int).replace(
                 tzinfo=pytz.UTC
             )
@@ -103,6 +107,7 @@ class AOTWManager:
                 self.playlist_manager.update_playlist(aotw)
                 aotw.playlist_updated = True
                 aotw.log_data()
+                print("Playlist updated")
         else:
             print("Cannot update playlist because there is currently no AOTW!")
             print(f"Tell {self.chooser.name} to get on it!")
