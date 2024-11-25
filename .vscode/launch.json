@@ -5,26 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Daily email",
-            "type": "debugpy",
+            "name": "Deploy Cloud Function",
+            "type": "cloudcode.cloudfunctions",
             "request": "launch",
-            "program": "${workspaceFolder}/daily_email.py",
-            "console": "integratedTerminal",
-            "python": "${workspaceFolder}/venv/bin/python"
+            "functionName": "aotw-from-vs",
+            "gen": "GEN_2",
+            "revision": "",
+            "entryPoint": "run_daily_email",
+            "testInput": "",
+            "region": "us-west1",
+            "runtime": "python312"
         },
         {
-            "name": "Read submissions",
+            "name": "Tasks",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/read_submissions.py",
-            "console": "integratedTerminal",
-            "python": "${workspaceFolder}/venv/bin/python"
-        },
-        {
-            "name": "Update playlist",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "${workspaceFolder}/update_playlist.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "python": "${workspaceFolder}/venv/bin/python"
         },
