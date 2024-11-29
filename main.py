@@ -52,19 +52,15 @@ def update_playlist(env, test_date: datetime.datetime = None):
 
 
 def task_daily_email(event=None):
-    daily_email("prod")
+    daily_email("test", "2024-11-24")
     return {"status": "200", "status": "OK"}
 
 
 def task_search_for_new_aotw(event=None):
-    daily_email("prod")
-    return {"status": "200", "status": "OK"}
-
-
-def task_update_playlist(event=None):
-    daily_email("prod")
+    search_for_new_aotw("prod")
+    update_playlist("prod")
     return {"status": "200", "status": "OK"}
 
 
 if __name__ == "__main__":
-    task_daily_email()
+    task_search_for_new_aotw()
