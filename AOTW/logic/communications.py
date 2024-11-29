@@ -52,7 +52,7 @@ class Authentication:
                 creds = Credentials.from_authorized_user_file(
                     self.token_filename, self.scopes
                 )
-                print("Authenticating with prior token")
+                print(f"Authenticating to {self.api_name} with prior token")
             except:
                 creds = None
 
@@ -87,12 +87,12 @@ class Authentication:
             Exception: If authentication fails.
         """
 
-        # creds = self._get_credentials()
-        creds = None
+        creds = self._get_credentials()
         if not creds:
             try:
                 with open("spotify_credentials.json", "r") as f:
                     credentials = json.load(f)
+                print("Authenticating Spotify with Oauth")
                 auth_manager = SpotifyOAuth(
                     client_id=credentials["client_id"],
                     client_secret=credentials["client_secret"],
