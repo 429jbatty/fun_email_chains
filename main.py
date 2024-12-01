@@ -51,6 +51,18 @@ def update_playlist(env, test_date: datetime.datetime = None):
     manager.update_playlist()
 
 
+def send_chosen_email(env, test_date: datetime.datetime = None):
+    config = Config(env, test_date)
+    group = Group([*config.get_participant_emails()])
+    date_helper = DateHelper(config.run_date)
+    email_manager = EmailManager(config, GmailAPI(config.get_sender_email()))
+    manager = AOTWManager(
+        config=config, group=group, date_helper=date_helper, email_manager=email_manager
+    )
+
+    manager.send_chosen_email()
+
+
 def task_daily_email(event=None):
     daily_email("test", "2024-11-24")
     return {"status": "200", "status": "OK"}
@@ -59,6 +71,7 @@ def task_daily_email(event=None):
 def task_search_for_new_aotw(event=None):
     search_for_new_aotw("prod")
     update_playlist("prod")
+    send_chosen_email("prod")
     return {"status": "200", "status": "OK"}
 
 

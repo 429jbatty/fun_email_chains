@@ -25,6 +25,13 @@ class EmailManager:
         )
         self.send_email_func(self.config.get_participant_emails(), subject, body)
 
+    def send_aotw_chosen_email(self, album: str, artist: str):
+        subject = (
+            f"Get ready to listen to {album.capitalize()} by {artist.capitalize()}!"
+        )
+        body = f"A new AOTW has been chosen: {album.capitalize()} by {artist.capitalize()}.\n\nListen to it here: {self.config.playlist_link}!"
+        self.send_email_func(self.config.get_participant_emails(), subject, body)
+
     def _print_email_to_terminal(recipients, subject, body):
         print(f"**MOCK EMAIL**")
         print(f"Recipients:{recipients}")

@@ -112,6 +112,11 @@ class AOTWManager:
             print("Cannot update playlist because there is currently no AOTW!")
             print(f"Tell {self.chooser.name} to get on it!")
 
+    def send_chosen_email(self):
+        current_week = self.date_helper.get_current_week(self.aotw_day_as_int)
+        aotw = self._read_aotw_from_log(current_week)
+        self.email_manager.send_aotw_chosen_email(album=aotw.album, artist=aotw.artist)
+
     def send_daily_email(self):
         if self.today_as_int == self.aotw_day_as_int:
             print("Sending AOTW email")

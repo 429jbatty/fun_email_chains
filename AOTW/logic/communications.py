@@ -88,6 +88,7 @@ class Authentication:
         """
 
         creds = self._get_credentials()
+        creds = None
         if not creds:
             try:
                 with open("spotify_credentials.json", "r") as f:
@@ -114,9 +115,26 @@ class Authentication:
                 json.dump(self.service.auth_manager.get_cached_token(), token_file)
 
         else:
+            try:
+                with open(self.token_filename, "r") as token_file:
+                    creds = json.load(token_file)
+                    # Check token expiration
+                    expires_at = datetime.datetime.fromtimestamp(creds["expires_at"])
+                    if expires_at < datetime.datetime.now():
+                        # Refresh token
+                        self.service.auth_manager.refresh_access_token(
+                            creds["refresh_token"]
+                        )
+                        creds = self.service.auth_manager.get_cached_token()
+                        with open(self.token_filename, "w") as token_file:
+                            json.dump(creds, token_file)
+                    return creds
+            except FileNotFoundError:
+                return None
+
             # Use existing credentials
-            auth_manager = SpotifyOAuth(**creds)
-            self.service = Spotify(auth_manager=auth_manager)
+            print("Authenticate spotify with saved token")
+            self.service = Spotify(auth=creds["access_token"])
 
     def get_service(self):
         """
