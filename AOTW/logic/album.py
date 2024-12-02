@@ -27,7 +27,7 @@ class Album:
     def _set_week(self, week: int):
         self.week = week
 
-    def log_data(self):
+    def log_data(self, filepath):
         """
         Writes the AOTW data to a JSON file in Google Cloud Storage.
 
@@ -35,7 +35,6 @@ class Album:
             gcs_client: An instance of the GoogleCloudStorage class.
         """
 
-        blob_name = f"albums/aotw_{self.week}.json"
         data = {
             "week": self.week,
             "album": self.album,
@@ -44,7 +43,7 @@ class Album:
             "playlist_updated": self.playlist_updated,
         }
         gcs_client = GoogleCloudStorage()
-        gcs_client.write_to_json(data, blob_name)
+        gcs_client.write_to_json(data, filepath)
 
     def __str__(self):
         return f"Album: {self.album}\nArtist: {self.artist}"

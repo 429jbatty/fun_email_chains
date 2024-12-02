@@ -18,8 +18,10 @@ class FormManager:
             form_id=self.config.aotw_form_id
         )
         if not submissions:
-            print(f"No submissions found")
+            print(f"No form submissions found")
             return None
         else:
+            print("Logging google form submissions...")
             self._log_submissions(submissions)
+            print(f"{len(submissions)} total submissions logged")
         return submissions

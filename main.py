@@ -17,63 +17,45 @@ def daily_email(env, test_date: datetime.datetime = None):
     date_helper = DateHelper(config.run_date)
     email_manager = EmailManager(config, GmailAPI(config.get_sender_email()))
     manager = AOTWManager(
-        config=config, group=group, date_helper=date_helper, email_manager=email_manager
+        config=config, 
+        group=group, 
+        date_helper=date_helper, 
+        email_manager=email_manager
     )
 
     manager.send_daily_email()
 
 
-def search_for_new_aotw(env, test_date: datetime.datetime = None):
+def set_aotw(env, test_date: datetime.datetime = None):
     config = Config(env, test_date)
     date_helper = DateHelper(config.run_date)
     form_manager = FormManager(config, FormAPI())
     group = Group([*config.get_participant_emails()])
+    email_manager = EmailManager(config, GmailAPI(config.get_sender_email()))
+    playlist_manager = PlaylistManager(config, SpotifyAPI())
     manager = AOTWManager(
-        config=config, date_helper=date_helper, form_manager=form_manager, group=group
+        config=config, 
+        date_helper=date_helper, 
+        form_manager=form_manager, 
+        group=group, 
+        email_manager=email_manager, 
+        playlist_manager=playlist_manager
     )
 
     manager.retrieve_and_log_form_submissions()
     manager.create_aotw_weekly_file()
-
-
-def update_playlist(env, test_date: datetime.datetime = None):
-    config = Config(env, test_date)
-    date_helper = DateHelper(config.run_date)
-    group = Group([*config.get_participant_emails()])
-    playlist_manager = PlaylistManager(config, SpotifyAPI())
-    manager = AOTWManager(
-        config=config,
-        date_helper=date_helper,
-        playlist_manager=playlist_manager,
-        group=group,
-    )
-
     manager.update_playlist()
-
-
-def send_chosen_email(env, test_date: datetime.datetime = None):
-    config = Config(env, test_date)
-    group = Group([*config.get_participant_emails()])
-    date_helper = DateHelper(config.run_date)
-    email_manager = EmailManager(config, GmailAPI(config.get_sender_email()))
-    manager = AOTWManager(
-        config=config, group=group, date_helper=date_helper, email_manager=email_manager
-    )
-
     manager.send_chosen_email()
 
 
 def task_daily_email(event=None):
-    daily_email("test", "2024-11-24")
+    daily_email("prod")
     return {"status": "200", "status": "OK"}
 
 
-def task_search_for_new_aotw(event=None):
-    search_for_new_aotw("prod")
-    update_playlist("prod")
-    send_chosen_email("prod")
+def task_set_aotw(event=None):
+    set_aotw("prod")
     return {"status": "200", "status": "OK"}
-
 
 if __name__ == "__main__":
-    task_search_for_new_aotw()
+    task_daily_email()

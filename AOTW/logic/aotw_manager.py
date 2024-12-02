@@ -46,14 +46,13 @@ class AOTWManager:
         else:
             return aotw.playlist_updated
 
-    def _read_aotw_from_log(self, week):
-        blob_name = f"albums/aotw_{week}.json"
-        try:
-            gcs_client = GoogleCloudStorage()
-            json_data = gcs_client.read_json(blob_name)
+    def _read_aotw_from_log(self):
+        blob_name = self.config.album_log_filepath
+        gcs_client = GoogleCloudStorage()
+        json_data = gcs_client.read_json(blob_name)
+        if json_data is not None:
             return Album(**json_data)
-        except Exception as e:
-            print(f"Error reading AOTW data from GCS: {e}")
+        else:
             return None
 
     def create_aotw_weekly_file(self):
@@ -91,36 +90,38 @@ class AOTWManager:
             relevant_submission = filtered_data[0]
             aotw = Album(**relevant_submission)
             aotw._set_week(self.date_helper.get_current_week(self.aotw_day_as_int))
-            aotw.log_data()
+            aotw.log_data(self.config.album_log_filepath)
 
     def retrieve_and_log_form_submissions(self):
         return self.form_manager.retrieve_and_log_submissions()
 
     def update_playlist(self):
-        current_week = self.date_helper.get_current_week(self.aotw_day_as_int)
-        aotw = self._read_aotw_from_log(current_week)
+        aotw = self._read_aotw_from_log()
         if aotw is not None:
             if aotw.playlist_updated:
-                print("Spotify playlist is up-to-date")
+                print("Spotify playlist is already up-to-date")
             else:
                 print("Updating spotify playlist...")
                 self.playlist_manager.update_playlist(aotw)
                 aotw.playlist_updated = True
-                aotw.log_data()
+                aotw.log_data(self.config.album_log_filepath)
                 print("Playlist updated")
         else:
             print("Cannot update playlist because there is currently no AOTW!")
             print(f"Tell {self.chooser.name} to get on it!")
 
     def send_chosen_email(self):
-        current_week = self.date_helper.get_current_week(self.aotw_day_as_int)
-        aotw = self._read_aotw_from_log(current_week)
-        self.email_manager.send_aotw_chosen_email(album=aotw.album, artist=aotw.artist)
+        aotw = self._read_aotw_from_log()
+        if aotw is not None:
+            print(f"Sending email to announce new album ({aotw.album} by {aotw.artist})")
+            self.email_manager.send_aotw_chosen_email(album=aotw.album, artist=aotw.artist)
+            print(f"Sent")
 
     def send_daily_email(self):
         if self.today_as_int == self.aotw_day_as_int:
             print("Sending AOTW email")
             self.email_manager.send_aotw_email(self.chooser.name)
+            print("Sent")
         elif self.today_as_int in self.reminder_days_as_ints:
             if self._read_aotw_from_log() is None:
                 return print("Cannot send reminder because AOTW was not picked")
@@ -129,5 +130,6 @@ class AOTWManager:
                 self.today_as_int, self.aotw_day_as_int
             )
             self.email_manager.send_reminder_email(days_left=days_left)
+            print("Sent")
         else:
             print("No email to send today")

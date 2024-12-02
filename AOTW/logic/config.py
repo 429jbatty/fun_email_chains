@@ -17,20 +17,30 @@ class Config:
         self.env = self._get_env(env)
         self.run_date = self._get_run_date(test_date)
         self._load_env()
-        self.bot_email = os.environ.get("SENDER_EMAIL")
-        self.participant_emails = os.environ.get("PARTICIPANT_EMAILS").split(",")
-        self.aotw_day = os.environ.get("AOTW_DAY")
-        self.aotw_form_link = os.environ.get("AOTW_FORM_LINK")
-        self.aotw_form_id = os.environ.get("AOTW_FORM_ID")
-        self.playlist_id = os.environ.get("PLAYLIST_ID")
-        self.playlist_link = os.environ.get("PLAYLIST_LINK")
-        self.data_folder = os.environ.get("DATA_FOLDER")
-        self.reminder_days = os.environ.get("REMINDER_DAYS").split(",")
+        self.bot_email = self._get_run_var("SENDER_EMAIL")
+        self.participant_emails = self._get_run_var("PARTICIPANT_EMAILS").split(",")
+        self.aotw_day = self._get_run_var("AOTW_DAY")
+        self.aotw_form_link = self._get_run_var("AOTW_FORM_LINK")
+        self.aotw_form_id = self._get_run_var("AOTW_FORM_ID")
+        self.playlist_id = self._get_run_var("PLAYLIST_ID")
+        self.playlist_link = self._get_run_var("PLAYLIST_LINK")
+        self.reminder_days = self._get_run_var("REMINDER_DAYS").split(",")
         self.package_path = os.path.dirname(os.path.dirname(__file__))
+        self._print_config_to_terminal()
+
+    @property
+    def current_week(self):
+        return DateHelper(self.run_date).get_current_week(reference_day_of_week=self.get_aotw_day_as_int())
+
+    @property
+    def album_log_filepath(self):
+        if self.env == Env.PROD:
+            return f"albums/aotw_{self.current_week}.json"
+        else:
+            return f"albums/test/aotw_{self.current_week}.json"
 
     def _get_env(self, env):
         result = Env(env)
-        print(f"Environment: {result.value}\n")
         return result
 
     def _load_env(self):
@@ -38,6 +48,32 @@ class Config:
         if result == False:
             raise Exception("Could not find .env")
 
+    def _get_run_var(self, var_name:str):
+        """Returns environment variable value. If env is TEST, will search for "DEV_<variable name>" before default to prod version.
+
+        Args:
+            var_name (str): environment variable name
+
+        Returns:
+            str: variable value
+        """
+        if self.env == Env.TEST:
+            dev_var_name = f"DEV_{var_name}"
+            value = os.environ.get(dev_var_name)
+            if value is None:
+                pass
+            else:
+                return value
+        return os.environ.get(var_name)
+
+    def _print_config_to_terminal(self):
+        print("------------------------------")
+        print("RUN PARAMETERS:")
+        print(f"Environment: {self.env.name}")
+        print(f"Date: {self.run_date}")
+        print(f"Participants: {self.participant_emails}")
+        print("\n")
+        
     def get_sender_email(self):
         return self.bot_email
 
@@ -52,8 +88,6 @@ class Config:
                 run_date = datetime.datetime.strptime(test_date, "%Y-%m-%d").date()
         else:
             run_date = datetime.datetime.now(tz=pytz.timezone("US/Pacific")).date()
-        run_date_str = run_date.strftime("%m/%d/%Y")
-        print(f"Run Date: {run_date_str}\n")
         return run_date
 
     def get_aotw_day_as_int(self):
@@ -71,3 +105,5 @@ class Config:
             raise ValueError(
                 f"Invalid AOTW_DAY: {self.aotw_day}. Must be a valid day of the week, e.g., 'Monday', 'Tuesday'."
             )
+
+    
