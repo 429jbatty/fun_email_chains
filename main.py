@@ -57,5 +57,9 @@ def task_set_aotw(event=None):
     set_aotw("prod")
     return {"status": "200", "status": "OK"}
 
+def task_dev_set_aotw(event=None):
+    set_aotw("test")
+    return {"status": "200", "status": "OK"}
+
 if __name__ == "__main__":
     task_daily_email()
