@@ -13,6 +13,8 @@ from google.oauth2.credentials import Credentials
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
 from google.cloud import storage
+from openai import OpenAI
+from email.mime.text import MIMEText
 
 
 class Authentication:
@@ -57,7 +59,7 @@ class Authentication:
                 creds = None
 
         if not creds or not creds.valid:
-            print("Obtaining new token for authentication")
+            print("Obtaining refresh token for authentication")
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
@@ -88,7 +90,7 @@ class Authentication:
         """
 
         access_creds = self._get_access_credentials()
-        if not access_creds: 
+        if not access_creds:
             # Must go through Oauth
             with open("spotify_credentials.json", "r") as f:
                 credentials = json.load(f)
@@ -112,11 +114,11 @@ class Authentication:
                 if expires_at < datetime.datetime.now():
                     print("Authenticating spotify with refresh token")
                     with open("spotify_credentials.json", "r") as f:
-                        credentials = json.load(f)                        
+                        credentials = json.load(f)
                     auth_manager = SpotifyOAuth(
                         client_id=credentials["client_id"],
                         client_secret=credentials["client_secret"],
-                        redirect_uri=credentials["redirect_uri"]
+                        redirect_uri=credentials["redirect_uri"],
                     )
                     self.service = Spotify(auth_manager=auth_manager)
                     self.service.auth_manager.refresh_access_token(
@@ -128,7 +130,7 @@ class Authentication:
                 else:
                     # Use existing credentials
                     print("Authenticating spotify with saved token")
-                    self.service = Spotify(auth=access_creds["access_token"])                    
+                    self.service = Spotify(auth=access_creds["access_token"])
                 return access_creds
 
     def get_service(self):
@@ -263,6 +265,18 @@ class GmailAPI:
 
         return base64.urlsafe_b64encode(message_bytes).decode()
 
+    def create_message_html(self, sender, recipients, subject, body):
+        msg = MIMEText(body, "html")
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = ", ".join(recipients)
+
+        # Convert the string to bytes before encoding
+        raw_message = base64.urlsafe_b64encode(msg.as_string().encode("utf-8")).decode(
+            "utf-8"
+        )
+        return raw_message
+
     def send_email(self, recipients, subject, body):
         """
         Sends an email using the Gmail API.
@@ -278,7 +292,9 @@ class GmailAPI:
 
         try:
             service = self.auth.get_service()
-            message = self.create_message(self.sender_email, recipients, subject, body)
+            message = self.create_message_html(
+                self.sender_email, recipients, subject, body
+            )
             service.users().messages().send(
                 userId="me", body={"raw": message}
             ).execute()
@@ -493,3 +509,56 @@ class GoogleCloudStorage:
         blob = bucket.blob(blob_name)
         json_data = json.dumps(data, indent=4)
         blob.upload_from_string(json_data, content_type="application/json")
+
+    def read_txt(self, blob_name):
+        """Reads the content of a GCS blob (text file) and returns it as a string.
+
+        Args:
+            blob_name: The name of the text file blob.
+
+        Returns:
+            The content of the text file as a string.
+        """
+
+        bucket = self.client.bucket(GoogleCloudStorage.BUCKET_NAME)
+        blob = bucket.blob(blob_name)
+        if blob.exists():
+            return blob.download_as_text()
+        else:
+            print(f"File {blob_name} does not exist, returning None")
+            return None
+
+
+class OpenAIAPI:
+    client = None
+    default_model = "gpt-4o-mini"
+    default_context = "You are a helpful assistant."
+
+    def __init__(self, api_key):
+        if not OpenAIAPI.client:
+            OpenAIAPI.client = OpenAI(api_key=api_key)
+
+    def send_prompt(self, prompt):
+        """
+        Sends a prompt to the OpenAI API and returns the generated text.
+
+        Args:
+            prompt: The prompt to send to the model.
+            model: The OpenAI model to use.
+            max_tokens: The maximum number of tokens to generate.
+            temperature: Controls the randomness of the generated text.
+
+        Returns:
+            The generated text.
+        """
+
+        message = [
+            {"role": "system", "content": OpenAIAPI.default_context},
+            {"role": "user", "content": prompt},
+        ]
+
+        response = self.client.chat.completions.create(
+            model=OpenAIAPI.default_model, messages=message
+        )
+
+        return response.choices[0].message.content.strip()

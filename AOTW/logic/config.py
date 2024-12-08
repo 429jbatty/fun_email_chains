@@ -24,13 +24,16 @@ class Config:
         self.aotw_form_id = self._get_run_var("AOTW_FORM_ID")
         self.playlist_id = self._get_run_var("PLAYLIST_ID")
         self.playlist_link = self._get_run_var("PLAYLIST_LINK")
+        self.openai_api_key = self._get_run_var("OPENAI_API_KEY")
         self.reminder_days = self._get_run_var("REMINDER_DAYS").split(",")
         self.package_path = os.path.dirname(os.path.dirname(__file__))
         self._print_config_to_terminal()
 
     @property
     def current_week(self):
-        return DateHelper(self.run_date).get_current_week(reference_day_of_week=self.get_aotw_day_as_int())
+        return DateHelper(self.run_date).get_current_week(
+            reference_day_of_week=self.get_aotw_day_as_int()
+        )
 
     @property
     def album_log_filepath(self):
@@ -48,7 +51,7 @@ class Config:
         if result == False:
             raise Exception("Could not find .env")
 
-    def _get_run_var(self, var_name:str):
+    def _get_run_var(self, var_name: str):
         """Returns environment variable value. If env is TEST, will search for "DEV_<variable name>" before default to prod version.
 
         Args:
@@ -73,7 +76,7 @@ class Config:
         print(f"Date: {self.run_date}")
         print(f"Participants: {self.participant_emails}")
         print("\n")
-        
+
     def get_sender_email(self):
         return self.bot_email
 
@@ -105,5 +108,3 @@ class Config:
             raise ValueError(
                 f"Invalid AOTW_DAY: {self.aotw_day}. Must be a valid day of the week, e.g., 'Monday', 'Tuesday'."
             )
-
-    
