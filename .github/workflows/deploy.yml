@@ -84,4 +84,4 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           environment_variables: |-
             EXECUTION_ENV=GCP
-            PROJECT_ID: ${{ secrets.PROJECT_ID }}
+            PROJECT_ID=${{ secrets.PROJECT_ID }}
