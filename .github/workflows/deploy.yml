@@ -10,7 +10,7 @@ jobs:
     name: Deploy Function
     runs-on: ubuntu-latest
 
-    permissions: # Recommended, but not strictly required for this specific error
+    permissions:
       contents: read
 
     steps:
@@ -25,15 +25,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Debug Secret (REMOVE THIS AFTER DEBUGGING!)
-        run: echo "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
-      - name: Project Secret (REMOVE THIS AFTER DEBUGGING!)
-        run: echo "${{ secrets.PROJECT_ID }}"
-
       - name: Authenticate Google Cloud
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
+
+      # Delete existing functions (before deployment)
+      - name: Delete existing AOTW function (if exists)
+        run: |
+          gcloud functions delete AOTW --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
+      - name: Delete existing Search-AOTW function (if exists)
+        run: |
+          gcloud functions delete Search-AOTW --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
+      - name: Delete existing Test-AOTW-daily-email function (if exists)
+        run: |
+          gcloud functions delete Test-AOTW-daily-email --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
+      - name: Delete existing Test-set-AOTW function (if exists)
+        run: |
+          gcloud functions delete Test-set-AOTW --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
 
       - name: Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v2
