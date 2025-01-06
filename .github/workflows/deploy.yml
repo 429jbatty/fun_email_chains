@@ -44,7 +44,6 @@ jobs:
           source_dir: .
           entry_point: task_daily_email
           project_id: ${{ secrets.PROJECT_ID }}
-          environment: GEN_2
 
       - name: Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v2
@@ -55,7 +54,6 @@ jobs:
           source_dir: .
           entry_point: task_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
-          environment: GEN_2
 
       - name: (Test) Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v2
@@ -66,7 +64,6 @@ jobs:
           source_dir: .
           entry_point: task_dev_daily_email
           project_id: ${{ secrets.PROJECT_ID }}
-          environment: GEN_2
 
       - name: (Test) Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v2
@@ -77,4 +74,3 @@ jobs:
           source_dir: .
           entry_point: task_dev_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
-          environment: GEN_2
