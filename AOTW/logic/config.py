@@ -64,7 +64,7 @@ class Config:
         Returns:
             str: variable value
         """
-        if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        if os.environ.get("EXECUTION_ENV") == "GCP":
             # Use Google Cloud Secret Manager (GCP)
             client = secretmanager.SecretManagerServiceClient()
             project_id = os.environ.get("PROJECT_ID")
