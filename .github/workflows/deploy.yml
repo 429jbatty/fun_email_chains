@@ -3,12 +3,15 @@ name: Deploy AOTW
 on:
   push:
     branches:
-      - main # Trigger on pushes to the main branch
+      - main
 
 jobs:
   deploy:
     name: Deploy Function
     runs-on: ubuntu-latest
+
+    permissions: # Recommended, but not strictly required for this specific error
+      contents: read
 
     steps:
       - name: Checkout code
@@ -22,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Debug Secret (REMOVE THIS AFTER DEBUGGING!)
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" | head -c 50
+
       - name: Deploy Cloud Function
         uses: google-github-actions/deploy-cloud-functions@v2
         with:
@@ -30,5 +36,5 @@ jobs:
           runtime: python310
           source_dir: .
           entry_point: task_set_aotw
-          project_id: ${{ secrets.PROJECT_ID }} 
-
+          project_id: ${{ secrets.PROJECT_ID }}
+          timeout: 60s # if needed
