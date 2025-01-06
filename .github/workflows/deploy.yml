@@ -1,0 +1,37 @@
+name: Deploy AOTW
+
+on:
+  push:
+    branches:
+      - main # Trigger on pushes to the main branch
+
+jobs:
+  deploy:
+    name: Deploy Function
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Deploy Cloud Function
+        uses: google-github-actions/deploy-cloud-functions@v1
+        with:
+          name: task_set_aotw # Replace with your function's name
+          region: us-west1 # Replace with your function's region
+          runtime: python312 # Replace with your function's runtime
+          source_dir: . # Path to your function's code (usually the root of the repo)
+          entry_point: task_set_aotw # Replace with your function's entry point (e.g., main)
+          credentials_json: ${{ secrets.GOOGLE_CREDENTIALS }}
+          #optional parameters
+          trigger_http: true # if function is http triggered
+          #available_memory_mb: 256 # memory allocated to function
+          #timeout: 60s # timeout for function execution
