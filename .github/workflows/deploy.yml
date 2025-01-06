@@ -30,20 +30,6 @@ jobs:
         with:
           credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
 
-      # Delete existing functions (before deployment)
-      - name: Delete existing AOTW function (if exists)
-        run: |
-          gcloud functions delete AOTW --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
-      - name: Delete existing Search-AOTW function (if exists)
-        run: |
-          gcloud functions delete Search-AOTW --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
-      - name: Delete existing Test-AOTW-daily-email function (if exists)
-        run: |
-          gcloud functions delete Test-AOTW-daily-email --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
-      - name: Delete existing Test-set-AOTW function (if exists)
-        run: |
-          gcloud functions delete Test-set-AOTW --region=us-west1 --project=${{ secrets.PROJECT_ID }} --quiet || true
-
       - name: Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v3
         with:
@@ -54,7 +40,6 @@ jobs:
           source_dir: .
           entry_point: task_daily_email
           project_id: ${{ secrets.PROJECT_ID }}
-          allow_unauthenticated: true
 
       - name: Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -66,7 +51,6 @@ jobs:
           source_dir: .
           entry_point: task_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
-          allow_unauthenticated: true
 
       - name: (Test) Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -78,7 +62,6 @@ jobs:
           source_dir: .
           entry_point: task_dev_daily_email
           project_id: ${{ secrets.PROJECT_ID }}
-          allow_unauthenticated: true
 
       - name: (Test) Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -90,4 +73,3 @@ jobs:
           source_dir: .
           entry_point: task_dev_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
-          allow_unauthenticated: true
