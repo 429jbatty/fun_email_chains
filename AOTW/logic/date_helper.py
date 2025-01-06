@@ -50,11 +50,11 @@ class DateHelper:
             The number of the specified day of the week that have occurred so far in the year.
         """
 
-        start_of_year = datetime.date(self.current_date.year, 1, 1)
-        days_since_start = (self.current_date - start_of_year).days + 1
+        aotw_start_date = datetime.date(2024, 1, 1)
+        days_since_start = (self.current_date - aotw_start_date).days + 1
 
         # Find the first occurrence of the specified day of the week within those days
-        first_day_index = (reference_day_of_week - start_of_year.weekday()) % 7
+        first_day_index = (reference_day_of_week - aotw_start_date.weekday()) % 7
 
         # Calculate the number of occurrences of the day of the week
         num_occurrences = days_since_start // 7
