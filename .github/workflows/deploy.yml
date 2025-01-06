@@ -26,7 +26,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Debug Secret (REMOVE THIS AFTER DEBUGGING!)
-        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}" | head -c 50
+        run: echo "${{ secrets.GOOGLE_CREDENTIALS }}"
+      - name: Project Secret (REMOVE THIS AFTER DEBUGGING!)
+        run: echo "${{ secrets.PROJECT_ID }}"
 
       - name: Deploy Cloud Function
         uses: google-github-actions/deploy-cloud-functions@v2
