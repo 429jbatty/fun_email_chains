@@ -42,6 +42,7 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           environment_variables: |-
             EXECUTION_ENV=GCP
+            PROJECT_ID: ${{ secrets.PROJECT_ID }}
 
       - name: Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -55,6 +56,7 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           environment_variables: |-
             EXECUTION_ENV=GCP
+            PROJECT_ID: ${{ secrets.PROJECT_ID }}
 
       - name: (Test) Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -68,6 +70,7 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           environment_variables: |-
             EXECUTION_ENV=GCP
+            PROJECT_ID: ${{ secrets.PROJECT_ID }}
 
       - name: (Test) Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -81,3 +84,4 @@ jobs:
           project_id: ${{ secrets.PROJECT_ID }}
           environment_variables: |-
             EXECUTION_ENV=GCP
+            PROJECT_ID: ${{ secrets.PROJECT_ID }}
