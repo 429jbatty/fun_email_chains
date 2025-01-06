@@ -54,6 +54,7 @@ jobs:
           source_dir: .
           entry_point: task_daily_email
           project_id: ${{ secrets.PROJECT_ID }}
+          allow_unauthenticated: true
 
       - name: Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -65,6 +66,7 @@ jobs:
           source_dir: .
           entry_point: task_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
+          allow_unauthenticated: true
 
       - name: (Test) Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -76,6 +78,7 @@ jobs:
           source_dir: .
           entry_point: task_dev_daily_email
           project_id: ${{ secrets.PROJECT_ID }}
+          allow_unauthenticated: true
 
       - name: (Test) Deploy Function - AOTW Trigger
         uses: google-github-actions/deploy-cloud-functions@v3
@@ -87,3 +90,4 @@ jobs:
           source_dir: .
           entry_point: task_dev_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
+          allow_unauthenticated: true
