@@ -35,13 +35,46 @@ jobs:
         with:
           credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
 
-      - name: Deploy Cloud Function
+      - name: Deploy Function - AOTW Email
         uses: google-github-actions/deploy-cloud-functions@v2
         with:
-          name: task_set_aotw
+          name: AOTW
+          region: us-west1
+          runtime: python310
+          source_dir: .
+          entry_point: task_daily_email
+          project_id: ${{ secrets.PROJECT_ID }}
+          environment: GEN_2
+
+      - name: Deploy Function - AOTW Trigger
+        uses: google-github-actions/deploy-cloud-functions@v2
+        with:
+          name: Search-AOTW
           region: us-west1
           runtime: python310
           source_dir: .
           entry_point: task_set_aotw
+          project_id: ${{ secrets.PROJECT_ID }}
+          environment: GEN_2
+
+      - name: (Test) Deploy Function - AOTW Email
+        uses: google-github-actions/deploy-cloud-functions@v2
+        with:
+          name: Test-AOTW-daily-email
+          region: us-west1
+          runtime: python310
+          source_dir: .
+          entry_point: task_dev_daily_email
+          project_id: ${{ secrets.PROJECT_ID }}
+          environment: GEN_2
+
+      - name: (Test) Deploy Function - AOTW Trigger
+        uses: google-github-actions/deploy-cloud-functions@v2
+        with:
+          name: Test-set-AOTW
+          region: us-west1
+          runtime: python310
+          source_dir: .
+          entry_point: task_dev_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
           environment: GEN_2
