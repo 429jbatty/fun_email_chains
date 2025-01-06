@@ -17,6 +17,7 @@ class Config:
         self.env = self._get_env(env)
         self.run_date = self._get_run_date(test_date)
         self._load_env()
+        self.project_id = self._get_run_var("PROJECT_ID")        
         self.bot_email = self._get_run_var("SENDER_EMAIL")
         self.participant_emails = self._get_run_var("PARTICIPANT_EMAILS").split(",")
         self.aotw_day = self._get_run_var("AOTW_DAY")

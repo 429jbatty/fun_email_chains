@@ -15,6 +15,7 @@ from spotipy import Spotify
 from google.cloud import storage
 from openai import OpenAI
 from email.mime.text import MIMEText
+from google.cloud import secretmanager_v1 as secrets
 
 
 class Authentication:
@@ -24,6 +25,13 @@ class Authentication:
     Takes an API name and scopes as arguments.
     """
 
+
+    api_to_secret_key = {
+        "spotify":"spotify_credentials",
+        "forms": "forms_credentials",
+        "gmail": "credentials"
+    }
+
     def __init__(self, api_name, scopes, token_filename):
         self.api_name = api_name
         self.scopes = scopes
@@ -32,18 +40,32 @@ class Authentication:
 
     def _get_access_credentials(self):
         """
-        Retrieves credentials from the token file or initiates a new authentication flow.
+        Retrieves credentials from Secret Manager or the token file.
 
         Returns:
             A dictionary containing the cached credentials or None if not found.
         """
 
+        try:
+            # Get credentials from Secret Manager with the secret name and version
+            secret_client = secrets.SecretManagerServiceClient()
+            secret_key = self.api_to_secret_key[self.api_name]
+            secret_name = f"projects/{os.getenv('PROJECT_ID')}/secrets/{secret_key}-credentials/versions/latest"            
+            response = secret_client.access_secret_version(name=secret_name)
+            access_creds = json.loads(response.payload.data.decode("UTF-8"))
+            return access_creds
+        except Exception as e:
+            print(f"Error retrieving credentials from Secret Manager: {e}")
+            pass
+
+        # If Secret Manager fails, attempt to read from the fallback token file (optional)
         if os.path.exists(self.token_filename):
             try:
                 with open(self.token_filename, "r") as token_file:
                     return json.load(token_file)
             except:
                 pass  # Continue to obtain new creds
+
         return None
 
     def _authenticate(self):
@@ -239,7 +261,7 @@ class GmailAPI:
         self.auth = Authentication(
             "gmail",
             ["https://www.googleapis.com/auth/gmail.modify"],
-            "gmail_token.json",
+            "gmail_token.json"
         )
 
     def create_message(self, sender, recipients, subject, body):
@@ -407,25 +429,36 @@ class FormAPI:
 
 class GoogleCloudStorage:
     BUCKET_NAME = "batty-bot-aotw"
-
+    SECRET = "storage_credentials"
     """
     A class for interacting with Google Cloud Storage.
 
     Uses service account credentials for authentication.
     """
-
     def __init__(self):
         """
-        Initializes the Google Cloud Storage client.
-
-        Args:
-            project_id: Your Google Cloud project ID.
-            service_account_file: Path to the service account key file in JSON format.
+        Initializes the Google Cloud Storage client using credentials from Secret Manager.
         """
 
-        self.client = storage.Client.from_service_account_json(
-            "storage_credentials.json", project="cool-framing-439219-k5"
-        )
+        project_id = os.environ.get("PROJECT_ID")
+        if not project_id:
+            raise ValueError("PROJECT_ID environment variable not set.")
+
+        try:
+            secret_client = secrets.SecretManagerServiceClient()
+            secret_name = f"projects/{project_id}/secrets/{self.SECRET}/versions/latest"
+            response = secret_client.access_secret_version(name=secret_name)
+            credentials_json = json.loads(response.payload.data.decode("UTF-8"))
+            self.client = storage.Client.from_service_account_info(credentials_json)
+            print("Google Cloud Storage client initialized using Secret Manager.")
+
+        except:
+            self.client = storage.Client.from_service_account_json(
+                "storage_credentials.json", project=project_id
+            )
+            print("Google Cloud Storage client initialized using local credentials.")
+
+
 
     def upload_file(self, source_file_path, destination_blob_name):
         """
