@@ -44,4 +44,4 @@ jobs:
           source_dir: .
           entry_point: task_set_aotw
           project_id: ${{ secrets.PROJECT_ID }}
-          timeout: 60s # if needed
+          environment: GEN_2
