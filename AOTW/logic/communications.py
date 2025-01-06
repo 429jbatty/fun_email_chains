@@ -25,11 +25,10 @@ class Authentication:
     Takes an API name and scopes as arguments.
     """
 
-
     api_to_secret_key = {
-        "spotify":"spotify_credentials",
+        "spotify": "spotify_credentials",
         "forms": "forms_credentials",
-        "gmail": "credentials"
+        "gmail": "credentials",
     }
 
     def __init__(self, api_name, scopes, token_filename):
@@ -50,7 +49,7 @@ class Authentication:
             # Get credentials from Secret Manager with the secret name and version
             secret_client = secrets.SecretManagerServiceClient()
             secret_key = self.api_to_secret_key[self.api_name]
-            secret_name = f"projects/{os.getenv('PROJECT_ID')}/secrets/{secret_key}-credentials/versions/latest"            
+            secret_name = f"projects/{os.getenv('PROJECT_ID')}/secrets/{secret_key}/versions/latest"
             response = secret_client.access_secret_version(name=secret_name)
             access_creds = json.loads(response.payload.data.decode("UTF-8"))
             return access_creds
@@ -261,7 +260,7 @@ class GmailAPI:
         self.auth = Authentication(
             "gmail",
             ["https://www.googleapis.com/auth/gmail.modify"],
-            "gmail_token.json"
+            "gmail_token.json",
         )
 
     def create_message(self, sender, recipients, subject, body):
@@ -435,6 +434,7 @@ class GoogleCloudStorage:
 
     Uses service account credentials for authentication.
     """
+
     def __init__(self):
         """
         Initializes the Google Cloud Storage client using credentials from Secret Manager.
@@ -457,8 +457,6 @@ class GoogleCloudStorage:
                 "storage_credentials.json", project=project_id
             )
             print("Google Cloud Storage client initialized using local credentials.")
-
-
 
     def upload_file(self, source_file_path, destination_blob_name):
         """
