@@ -3,6 +3,7 @@ import datetime
 from enum import Enum
 from dotenv import load_dotenv
 import pytz
+from google.cloud import secretmanager
 
 from AOTW.logic.date_helper import DateHelper
 
@@ -16,8 +17,7 @@ class Config:
     def __init__(self, env, test_date: datetime.datetime = None):
         self.env = self._get_env(env)
         self.run_date = self._get_run_date(test_date)
-        self._load_env()
-        self.project_id = self._get_run_var("PROJECT_ID")        
+        self.project_id = self._get_run_var("PROJECT_ID")
         self.bot_email = self._get_run_var("SENDER_EMAIL")
         self.participant_emails = self._get_run_var("PARTICIPANT_EMAILS").split(",")
         self.aotw_day = self._get_run_var("AOTW_DAY")
@@ -47,13 +47,16 @@ class Config:
         result = Env(env)
         return result
 
-    def _load_env(self):
+    def _load_local_env(self):
         result = load_dotenv()
         if result == False:
             raise Exception("Could not find .env")
 
     def _get_run_var(self, var_name: str):
-        """Returns environment variable value. If env is TEST, will search for "DEV_<variable name>" before default to prod version.
+        """Returns environment variable value.
+
+        If GOOGLE_APPLICATION_CREDENTIALS is set (indicating GCP), it will use Google Cloud Secret Manager.
+        Otherwise, it will search for the variable in the .env file.
 
         Args:
             var_name (str): environment variable name
@@ -61,14 +64,38 @@ class Config:
         Returns:
             str: variable value
         """
-        if self.env == Env.TEST:
-            dev_var_name = f"DEV_{var_name}"
-            value = os.environ.get(dev_var_name)
-            if value is None:
-                pass
-            else:
-                return value
-        return os.environ.get(var_name)
+        if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+            # Use Google Cloud Secret Manager (GCP)
+            client = secretmanager.SecretManagerServiceClient()
+            project_id = os.environ.get("PROJECT_ID")
+            if not project_id:
+                raise ValueError(
+                    "PROJECT_ID environment variable must be set in GCP environment"
+                )
+
+            secret_name = var_name
+            version_name = (
+                f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+            )
+
+            try:
+                response = client.access_secret_version(request={"name": version_name})
+                secret_value = response.payload.data.decode("UTF-8")
+                return secret_value
+            except Exception as e:
+                print(f"Error accessing secret {secret_name}: {e}")
+                raise  # Re-raise the exception after logging
+        else:
+            self._load_local_env()
+            # Use local .env file
+            if self.env == Env.TEST:
+                dev_var_name = f"DEV_{var_name}"
+                value = os.environ.get(dev_var_name)
+                if value is None:
+                    pass
+                else:
+                    return value
+            return os.environ.get(var_name)
 
     def _print_config_to_terminal(self):
         print("------------------------------")
