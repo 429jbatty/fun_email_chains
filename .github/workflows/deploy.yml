@@ -31,3 +31,5 @@ jobs:
           source_dir: .
           entry_point: task_set_aotw
           project_id: ${{ secrets.PROJECT_ID }} 
+          credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+
