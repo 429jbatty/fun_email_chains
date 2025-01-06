@@ -30,6 +30,11 @@ jobs:
       - name: Project Secret (REMOVE THIS AFTER DEBUGGING!)
         run: echo "${{ secrets.PROJECT_ID }}"
 
+      - name: Authenticate Google Cloud
+      - uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
+
       - name: Deploy Cloud Function
         uses: google-github-actions/deploy-cloud-functions@v2
         with:
