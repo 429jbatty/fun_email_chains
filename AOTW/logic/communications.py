@@ -128,31 +128,29 @@ class Authentication:
             with open(self.token_filename, "w") as token_file:
                 json.dump(self.service.auth_manager.get_cached_token(), token_file)
         else:
-            with open(self.token_filename, "r") as token_file:
-                access_creds = json.load(token_file)
-                # Check token expiration
-                expires_at = datetime.datetime.fromtimestamp(access_creds["expires_at"])
-                if expires_at < datetime.datetime.now():
-                    print("Authenticating spotify with refresh token")
-                    with open("spotify_credentials.json", "r") as f:
-                        credentials = json.load(f)
-                    auth_manager = SpotifyOAuth(
-                        client_id=credentials["client_id"],
-                        client_secret=credentials["client_secret"],
-                        redirect_uri=credentials["redirect_uri"],
-                    )
-                    self.service = Spotify(auth_manager=auth_manager)
-                    self.service.auth_manager.refresh_access_token(
-                        access_creds["refresh_token"]
-                    )
-                    access_creds = self.service.auth_manager.get_cached_token()
-                    with open(self.token_filename, "w") as token_file:
-                        json.dump(access_creds, token_file)
-                else:
-                    # Use existing credentials
-                    print("Authenticating spotify with saved token")
-                    self.service = Spotify(auth=access_creds["access_token"])
-                return access_creds
+            # Check token expiration
+            expires_at = datetime.datetime.fromtimestamp(access_creds["expires_at"])
+            if expires_at < datetime.datetime.now():
+                print("Authenticating spotify with refresh token")
+                with open("spotify_credentials.json", "r") as f:
+                    credentials = json.load(f)
+                auth_manager = SpotifyOAuth(
+                    client_id=credentials["client_id"],
+                    client_secret=credentials["client_secret"],
+                    redirect_uri=credentials["redirect_uri"],
+                )
+                self.service = Spotify(auth_manager=auth_manager)
+                self.service.auth_manager.refresh_access_token(
+                    access_creds["refresh_token"]
+                )
+                access_creds = self.service.auth_manager.get_cached_token()
+                with open(self.token_filename, "w") as token_file:
+                    json.dump(access_creds, token_file)
+            else:
+                # Use existing credentials
+                print("Authenticating spotify with saved token")
+                self.service = Spotify(auth=access_creds["access_token"])
+            return access_creds
 
     def get_service(self):
         """
