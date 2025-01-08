@@ -83,15 +83,23 @@ class CredentialsManager:
         client_id = credentials["client_id"]
         client_secret = credentials["client_secret"]
         redirect_uri = credentials["redirect_uri"]
+        refresh_token = credentials["refresh_token"]
 
         try:
             try:
-                # no Oauth
-                sp_oauth = SpotifyOAuth(
+                auth_manager = SpotifyOAuth(
                     client_id=client_id,
                     client_secret=client_secret,
                     redirect_uri=redirect_uri,
                 )
+
+                # Refresh
+                auth_manager.refresh_access_token(refresh_token=refresh_token)
+
+                # Create Spotify object with updated tokens
+                sp = Spotify(auth_manager=auth_manager)
+                return sp
+
             except:
                 # Oauth
                 sp_oauth = SpotifyOAuth(
