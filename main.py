@@ -17,10 +17,7 @@ def daily_email(env, test_date: datetime.datetime = None):
     date_helper = DateHelper(config.run_date)
     email_manager = EmailManager(config, GmailAPI(config.get_sender_email()))
     manager = AOTWManager(
-        config=config, 
-        group=group, 
-        date_helper=date_helper, 
-        email_manager=email_manager
+        config=config, group=group, date_helper=date_helper, email_manager=email_manager
     )
 
     manager.send_daily_email()
@@ -32,14 +29,16 @@ def set_aotw(env, test_date: datetime.datetime = None):
     form_manager = FormManager(config, FormAPI())
     group = Group([*config.get_participant_emails()])
     email_manager = EmailManager(config, GmailAPI(config.get_sender_email()))
-    playlist_manager = PlaylistManager(config, SpotifyAPI())
+    playlist_manager = PlaylistManager(
+        config, SpotifyAPI(config.spotify_local_credentials)
+    )
     manager = AOTWManager(
-        config=config, 
-        date_helper=date_helper, 
-        form_manager=form_manager, 
-        group=group, 
-        email_manager=email_manager, 
-        playlist_manager=playlist_manager
+        config=config,
+        date_helper=date_helper,
+        form_manager=form_manager,
+        group=group,
+        email_manager=email_manager,
+        playlist_manager=playlist_manager,
     )
 
     manager.retrieve_and_log_form_submissions()
@@ -57,13 +56,16 @@ def task_set_aotw(event=None):
     set_aotw("prod")
     return {"status": "200", "status": "OK"}
 
+
 def task_dev_set_aotw(event=None):
     set_aotw("test")
     return {"status": "200", "status": "OK"}
+
 
 def task_dev_daily_email(event=None):
     set_aotw("test")
     return {"status": "200", "status": "OK"}
 
+
 if __name__ == "__main__":
-    task_daily_email()
+    task_dev_set_aotw()

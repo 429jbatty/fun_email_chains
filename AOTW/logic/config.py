@@ -4,8 +4,10 @@ from enum import Enum
 from dotenv import load_dotenv
 import pytz
 from google.cloud import secretmanager
+import json
 
 from AOTW.logic.date_helper import DateHelper
+from AOTW.logic.communications import CredentialsManager
 
 
 class Env(Enum):
@@ -19,6 +21,7 @@ class Config:
         self.run_date = self._get_run_date(test_date)
         self.project_id = self._get_run_var("PROJECT_ID")
         self.bot_email = self._get_run_var("SENDER_EMAIL")
+        self.spotify_local_credentials = self._get_spotify_local_credentials()
         self.participant_emails = self._get_run_var("PARTICIPANT_EMAILS").split(",")
         self.aotw_day = self._get_run_var("AOTW_DAY")
         self.aotw_form_link = self._get_run_var("AOTW_FORM_LINK")
@@ -64,38 +67,42 @@ class Config:
         Returns:
             str: variable value
         """
-        if os.environ.get("EXECUTION_ENV") == "GCP":
-            # Use Google Cloud Secret Manager (GCP)
-            client = secretmanager.SecretManagerServiceClient()
-            project_id = os.environ.get("PROJECT_ID")
-            if not project_id:
-                raise ValueError(
-                    "PROJECT_ID environment variable must be set in GCP environment"
-                )
-
-            secret_name = var_name
-            version_name = (
-                f"projects/{project_id}/secrets/{secret_name}/versions/latest"
-            )
-
-            try:
-                response = client.access_secret_version(request={"name": version_name})
-                secret_value = response.payload.data.decode("UTF-8")
-                return secret_value
-            except Exception as e:
-                print(f"Error accessing secret {secret_name}: {e}")
-                raise  # Re-raise the exception after logging
-        else:
+        try:
             self._load_local_env()
-            # Use local .env file
+
             if self.env == Env.TEST:
+                # local dev variables
                 dev_var_name = f"DEV_{var_name}"
                 value = os.environ.get(dev_var_name)
                 if value is None:
                     pass
                 else:
                     return value
+            # local prod variables
             return os.environ.get(var_name)
+        except:
+            if self.env == Env.TEST:
+                # GCP dev variables
+                dev_var_name = f"DEV_{var_name}"
+                try:
+                    return CredentialsManager().get_secret_value(dev_var_name)
+                except:
+                    return CredentialsManager().get_secret_value(var_name)
+            return CredentialsManager().get_secret_value(var_name)
+
+    def _read_json_file(self, path):
+        try:
+            with open(path, "r") as f:
+                json_data = json.load(f)
+            return json_data
+        except:
+            raise Exception("Error reading json data")
+
+    def _get_spotify_local_credentials(self):
+        try:
+            return self._read_json_file(self._get_run_var("SPOTIFY_CREDENTIALS_FILE"))
+        except:
+            print("Did not find local spotify credentials")
 
     def _print_config_to_terminal(self):
         print("------------------------------")

@@ -3,170 +3,169 @@ import os
 import json
 import datetime
 
+from google.auth import default
+from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
+from google.cloud import secretmanager_v1 as secrets
+from google.auth.exceptions import DefaultCredentialsError
 from spotipy.oauth2 import SpotifyOAuth
 from spotipy import Spotify
+from spotipy.exceptions import SpotifyException
 from google.cloud import storage
 from openai import OpenAI
 from email.mime.text import MIMEText
-from google.cloud import secretmanager_v1 as secrets
 
 
-class Authentication:
-    """
-    A class for handling OAuth 2.0 authentication for Google and Spotify APIs.
+class CredentialsManager:
+    """Manages credentials, handling local files and Google Secret Manager."""
 
-    Takes an API name and scopes as arguments.
-    """
+    def __init__(self):
+        pass
 
-    api_to_secret_key = {
-        "spotify": "spotify_credentials",
-        "forms": "forms_credentials",
-        "gmail": "credentials",
-    }
-
-    def __init__(self, api_name, scopes, token_filename):
-        self.api_name = api_name
-        self.scopes = scopes
-        self.token_filename = token_filename
-        self.service = None
-
-    def _get_access_credentials(self):
-        """
-        Retrieves credentials from Secret Manager or the token file.
-
-        Returns:
-            A dictionary containing the cached credentials or None if not found.
-        """
-
+    def get_gcp_credentials(scopes=None):
+        """Gets Google Cloud credentials, handling refresh and validation."""
         try:
-            # Get credentials from Secret Manager with the secret name and version
-            secret_client = secrets.SecretManagerServiceClient()
-            secret_key = self.api_to_secret_key[self.api_name]
-            secret_name = f"projects/{os.getenv('PROJECT_ID')}/secrets/{secret_key}/versions/latest"
-            response = secret_client.access_secret_version(name=secret_name)
-            access_creds = json.loads(response.payload.data.decode("UTF-8"))
-            return access_creds
-        except Exception as e:
-            print(f"Error retrieving credentials from Secret Manager: {e}")
-            pass
-
-        # If Secret Manager fails, attempt to read from the fallback token file (optional)
-        if os.path.exists(self.token_filename):
-            try:
-                with open(self.token_filename, "r") as token_file:
-                    return json.load(token_file)
-            except:
-                pass  # Continue to obtain new creds
-
-        return None
-
-    def _authenticate(self):
-
-        creds = None
-        if os.path.exists(self.token_filename):
-            try:
-                creds = Credentials.from_authorized_user_file(
-                    self.token_filename, self.scopes
-                )
-                print(f"Authenticating to {self.api_name} with prior token")
-            except:
-                creds = None
-
-        if not creds or not creds.valid:
-            print("Obtaining refresh token for authentication")
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json",
-                    self.scopes,
-                    redirect_uri=f"http://localhost:{57738}/",
-                )
-                creds = flow.run_local_server(port=57738)
-
-            with open(self.token_filename, "w") as token:
-                token.write(creds.to_json())
-        try:
-            service = build(self.api_name, "v1", credentials=creds)
-            self.service = service
-            return service
-
-        except HttpError as error:
-            print(f"An error occurred during authentication: {error}")
-            raise Exception(f"Authentication failed for {self.api_name}")
-
-    def _authenticate_spotify(self):
-        """
-        Authenticates to the specified API using OAuth 2.0.
-
-        Raises:
-            Exception: If authentication fails.
-        """
-
-        access_creds = self._get_access_credentials()
-        if not access_creds:
-            # Must go through Oauth
-            with open("spotify_credentials.json", "r") as f:
-                credentials = json.load(f)
-            print("Authenticating Spotify with Oauth")
-            auth_manager = SpotifyOAuth(
-                client_id=credentials["client_id"],
-                client_secret=credentials["client_secret"],
-                redirect_uri=credentials["redirect_uri"],
-                scope=" ".join(self.scopes),  # Combine scopes into a single string
+            credentials, _ = default(scopes=scopes)
+        except DefaultCredentialsError as e:
+            print(f"Error getting default credentials: {e}")
+            print(
+                "Check GOOGLE_APPLICATION_CREDENTIALS or 'gcloud auth application-default login'."
             )
-            self.service = Spotify(auth_manager=auth_manager)
+            raise
 
-            # write token info
-            with open(self.token_filename, "w") as token_file:
-                json.dump(self.service.auth_manager.get_cached_token(), token_file)
+        try:
+            storage.Client(credentials=credentials).list_buckets(
+                max_results=1
+            )  # Validate with API call
+            return credentials
+        except Exception as e:
+            if (
+                hasattr(credentials, "expired")
+                and credentials.expired
+                and hasattr(credentials, "refresh_token")
+                and credentials.refresh_token
+            ):
+                try:
+                    credentials.refresh(Request())
+                    storage.Client(credentials=credentials).list_buckets(
+                        max_results=1
+                    )  # Validate with API call after refresh
+                    return credentials
+                except Exception as refresh_err:
+                    print(f"Credentials refresh failed: {refresh_err}")
+            print(f"API call failed: {e}")
+            raise
+
+    def get_spotify_credentials(self, local_credentials: dict = None, scopes=None):
+        # use local credentials file
+        if local_credentials:
+            credentials = local_credentials
         else:
-            # Check token expiration
-            expires_at = datetime.datetime.fromtimestamp(access_creds["expires_at"])
-            if expires_at < datetime.datetime.now():
-                print("Authenticating spotify with refresh token")
-                with open("spotify_credentials.json", "r") as f:
-                    credentials = json.load(f)
-                auth_manager = SpotifyOAuth(
-                    client_id=credentials["client_id"],
-                    client_secret=credentials["client_secret"],
-                    redirect_uri=credentials["redirect_uri"],
+            # Use GCP secrets
+            credentials = json.loads(self.get_secret_value("spotify_credentials"))
+        if all(
+            key in credentials for key in ["client_id", "client_secret", "redirect_uri"]
+        ):
+            return credentials
+        else:
+            raise ValueError(
+                "Missing required Spotify credentials in local_credentials"
+            )
+
+    def get_spotify_client(self, scopes, local_credentials):
+        """Creates a Spotify client, handling local and GCP environments."""
+
+        credentials = self.get_spotify_credentials(local_credentials, scopes)
+        client_id = credentials["client_id"]
+        client_secret = credentials["client_secret"]
+        redirect_uri = credentials["redirect_uri"]
+
+        try:
+            # Attempt to create a Spotify client using the environment variables
+            sp_oauth = SpotifyOAuth(
+                client_id=client_id,
+                client_secret=client_secret,
+                redirect_uri=redirect_uri,
+                scope=" ".join(scopes),  # Scopes as a space-separated string
+            )
+
+            # Get the token information. This will handle the OAuth flow if needed.
+            token_info = sp_oauth.get_cached_token()
+
+            if not token_info:
+                # If no cached token, prompt the user to authorize
+                auth_url = sp_oauth.get_authorize_url()
+                print(f"Please visit this URL to authorize: {auth_url}")
+                response = input("Enter the URL you were redirected to: ")
+                code = sp_oauth.parse_response_code(response)
+                token_info = sp_oauth.get_access_token(code)
+
+            if not token_info:
+                raise Exception("Failed to get Spotify token.")
+
+            # Create the Spotify client using the access token
+            sp = Spotify(auth=token_info["access_token"])
+            print("Spotify client created successfully.")
+            return sp
+
+        except SpotifyException as e:
+            print(f"Spotify API error: {e}")
+            raise
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            raise
+
+    def get_gmail_creds(self, scopes):
+        """Retrieves Gmail service using refresh token from Secret Manager or local file."""
+        try:
+            # Try to get credentials from Secret Manager (GCP)
+            token = self.get_secret_value(secret_name="GMAIL_TOKEN")
+            token_data = json.loads(token)
+        except DefaultCredentialsError:
+            print("Secret Manager credentials not found. Trying local token file.")
+            try:
+                with open("token.json", "r") as f:
+                    token_data = json.load(f)
+                    print("Using refresh token from token.json")
+            except FileNotFoundError:
+                print(
+                    "token.json file not found. Please run authentication locally first."
                 )
-                self.service = Spotify(auth_manager=auth_manager)
-                self.service.auth_manager.refresh_access_token(
-                    access_creds["refresh_token"]
-                )
-                access_creds = self.service.auth_manager.get_cached_token()
-                with open(self.token_filename, "w") as token_file:
-                    json.dump(access_creds, token_file)
-            else:
-                # Use existing credentials
-                print("Authenticating spotify with saved token")
-                self.service = Spotify(auth=access_creds["access_token"])
-            return access_creds
+                raise
+            except json.JSONDecodeError:
+                print("Invalid JSON in token.json")
+                raise
+        except Exception as e:
+            print(f"Error getting refresh token from Secret Manager: {e}")
+            raise
 
-    def get_service(self):
-        """
-        Returns the authenticated service object.
+        creds = Credentials(
+            token=None,
+            refresh_token=token_data["refresh_token"],
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=token_data["client_id"],
+            client_secret=token_data["client_secret"],
+            scopes=scopes,
+        )
+        try:
+            creds.refresh(Request())
+        except Exception as e:
+            print(f"Error refreshing token: {e}")
+            raise
 
-        Raises:
-            Exception: If authentication hasn't been performed yet.
-        """
+        return creds
 
-        if not self.service:
-            if self.api_name == "spotify":
-                self._authenticate_spotify()
-            else:
-                self._authenticate()
-
-        return self.service
+    def get_secret_value(self, secret_name):
+        credentials, project_id = default()
+        client = secrets.SecretManagerServiceClient()
+        name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+        response = client.access_secret_version(request={"name": name})
+        secret_value = response.payload.data.decode("UTF-8")
+        return secret_value
 
 
 class SpotifyAPI:
@@ -183,13 +182,13 @@ class SpotifyAPI:
         "user-library-read",
     ]
 
-    def __init__(self):
+    def __init__(self, local_credentials: dict):
         """
         Initializes the Spotify client.
         """
-
-        self.auth = Authentication("spotify", self.SCOPES, "spotify_token.json")
-        self.sp = self.auth.get_service()
+        self.sp = CredentialsManager().get_spotify_client(
+            self.SCOPES, local_credentials
+        )
 
     def search_album(self, artist_name, album_name):
         """
@@ -255,11 +254,14 @@ class GmailAPI:
 
     def __init__(self, sender_email):
         self.sender_email = sender_email
-        self.auth = Authentication(
-            "gmail",
-            ["https://www.googleapis.com/auth/gmail.modify"],
-            "gmail_token.json",
-        )
+        scopes = [
+            # "https://www.googleapis.com/auth/gmail.send",
+            "https://www.googleapis.com/auth/gmail.modify",
+            # "https://www.googleapis.com/auth/gmail.compose",
+            # "https://www.googleapis.com/auth/gmail.readonly",
+        ]
+        credentials = CredentialsManager().get_gmail_creds(scopes=scopes)
+        self.sp = build("gmail", "v1", credentials=credentials)
 
     def create_message(self, sender, recipients, subject, body):
         """
@@ -310,11 +312,10 @@ class GmailAPI:
         """
 
         try:
-            service = self.auth.get_service()
             message = self.create_message_html(
                 self.sender_email, recipients, subject, body
             )
-            service.users().messages().send(
+            self.sp.users().messages().send(
                 userId="me", body={"raw": message}
             ).execute()
             print("Email sent!")
@@ -336,9 +337,8 @@ class FormAPI:
     ]
 
     def __init__(self):
-        self.auth = Authentication(
-            "forms", self.SCOPES, "forms_token.json"
-        )  # Use provided scopes and token filename
+        credentials = CredentialsManager.get_gcp_credentials(scopes=FormAPI.SCOPES)
+        self.sp = build("forms", "v1", credentials=credentials)
 
     def _log_response(response_data):
         with open("submissions.json", "a+") as f:
@@ -373,8 +373,7 @@ class FormAPI:
         """
 
         try:
-            service = self.auth.get_service()
-            response = service.forms().responses().list(formId=form_id).execute()
+            response = self.sp.forms().responses().list(formId=form_id).execute()
             responses = response.get("responses", [])
 
             response_list = []
@@ -438,23 +437,8 @@ class GoogleCloudStorage:
         Initializes the Google Cloud Storage client using credentials from Secret Manager.
         """
 
-        project_id = os.environ.get("PROJECT_ID")
-        if not project_id:
-            raise ValueError("PROJECT_ID environment variable not set.")
-
-        try:
-            secret_client = secrets.SecretManagerServiceClient()
-            secret_name = f"projects/{project_id}/secrets/{self.SECRET}/versions/latest"
-            response = secret_client.access_secret_version(name=secret_name)
-            credentials_json = json.loads(response.payload.data.decode("UTF-8"))
-            self.client = storage.Client.from_service_account_info(credentials_json)
-            print("Google Cloud Storage client initialized using Secret Manager.")
-
-        except:
-            self.client = storage.Client.from_service_account_json(
-                "storage_credentials.json", project=project_id
-            )
-            print("Google Cloud Storage client initialized using local credentials.")
+        credentials = CredentialsManager.get_gcp_credentials()
+        self.client = storage.Client(credentials=credentials)  # Cloud Storage client
 
     def upload_file(self, source_file_path, destination_blob_name):
         """
