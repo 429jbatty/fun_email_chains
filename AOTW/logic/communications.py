@@ -85,13 +85,21 @@ class CredentialsManager:
         redirect_uri = credentials["redirect_uri"]
 
         try:
-            # Attempt to create a Spotify client using the environment variables
-            sp_oauth = SpotifyOAuth(
-                client_id=client_id,
-                client_secret=client_secret,
-                redirect_uri=redirect_uri,
-                scope=" ".join(scopes),  # Scopes as a space-separated string
-            )
+            try:
+                # no Oauth
+                sp_oauth = SpotifyOAuth(
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri,
+                )
+            except:
+                # Oauth
+                sp_oauth = SpotifyOAuth(
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    redirect_uri=redirect_uri,
+                    scope=" ".join(scopes),
+                )
 
             # Get the token information. This will handle the OAuth flow if needed.
             token_info = sp_oauth.get_cached_token()
