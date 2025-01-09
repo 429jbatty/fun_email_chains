@@ -68,8 +68,12 @@ class Config:
             str: variable value
         """
         try:
-            self._load_local_env()
+            if "GOOGLE_CLOUD_PROJECT" in os.environ:
+                raise Exception(
+                    "Running in GCP, forcing use of Google Cloud Secret Manager"
+                )
 
+            self._load_local_env()
             if self.env == Env.TEST:
                 # local dev variables
                 dev_var_name = f"DEV_{var_name}"
